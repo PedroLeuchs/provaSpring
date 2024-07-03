@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <title>CRUD de Produtos</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        header {
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        #criar-produto {
+            margin-bottom: 20px;
+        }
+
+        #listar-produtos table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #listar-produtos th, #listar-produtos td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+
+    </style>
+
+</head>
+<body>
+<header>
+    <h1>CRUD de Produtos</h1>
+</header>
+<main>
+    <section id="criar-produto">
+        <h2>Criar Produto</h2>
+        <form id="form-criar-produto">
+            <label for="nome">Nome:</label>
+            <input type="text" id="nome" name="nome">
+
+            <label for="preco">Preço:</label>
+            <input type="number" id="preco" name="preco">
+
+            <button type="submit">Criar</button>
+        </form>
+    </section>
+
+    <section id="listar-produtos">
+        <h2>Lista de Produtos</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Preço</th>
+                <th>Ações</th>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </section>
+</main>
+
+<script>
+    const formCriarProduto = document.getElementById('form-criar-produto');
+    const listaProdutos = document.querySelector('#listar-produtos tbody');
+
+    // Function to create a new product table row
+    function createProductRow(product) {
+        const row = listaProdutos.insertRow();
+        row.dataset.id = product.id; // Add data-id attribute to the row
+        row.insertCell().textContent = product.id;
+        row.insertCell().textContent = product.nome;
+        row.insertCell().textContent = product.preco;
+        const actionsCell = row.insertCell();
+
+        // Create edit and delete buttons
+        const editButton = document.createElement('button');
+        editButton.textContent = 'Editar';
+        editButton.addEventListener('click', () => {
+            // Pre-fill form with product data for editing
+            const nomeInput = document.getElementById('nome');
+            const precoInput = document.getElementById('preco');
+            nomeInput.value = product.nome;
+            precoInput.value = product.preco;
+
+            // Set the form to edit mode
+            formCriarProduto.dataset.editMode = product.id;
+
+            // Focus on the nome input field
+            nomeInput.focus();
+        });
+        actionsCell.appendChild(editButton);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Excluir';
+        deleteButton.addEventListener('click', () => {
+            deleteProduct(product.id);
+        });
+        actionsCell.appendChild(deleteButton);
+    }
+
+    // Handle form submission for creating a new product
+    formCriarProduto.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        const nome = document.getElementById('nome').value;
+        const preco = document.getElementById('preco').value;
+
+        // Check if the form is in edit mode
+        const editMode = formCriarProduto.dataset.editMode;
+
+        if (editMode) {
+            // Update existing product
+            updateProduct(editMode, { nome, preco });
+            // Reset edit mode
+            formCriarProduto.dataset.editMode = null;
+        } else {
+            // Create new product
+            createProduct(nome, preco);
+        }
+
+        // Clear the form
+        formCriarProduto.reset();
+    });
+
+    // Function to create a new product (Create)
+    function createProduct(nome, preco) {
+        fetch('/produtos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ nome, preco })
+        })
+            .then(response => response.json())
+            .then(createdProduct => {
+                createProductRow(createdProduct);
+            })
+            .catch(error => {
+                console.error(error);
+                // Handle errors (e.g., display an error message to the user)
+            });
+    }
+
+    // Function to fetch and display all products (Read)
+    function readProducts() {
+        fetch('/produtos')
+            .then(response => response.json())
+            .then(products => {
+                listaProdutos.innerHTML = ''; // Clear existing table rows
+                products.forEach(createProductRow);
+            })
+            .catch(error => {
+                console.error(error);
+                // Handle errors (e.g., display an error message to the user)
+            });
+    }
+
+    // Function to update a product (Update)
+    function updateProduct(productId, updatedProduct) {
+        fetch(`/produtos/${productId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedProduct)
+        })
+            .then(response => response.json())
+            .then(updatedProduct => {
+                // Update the corresponding table row
+                const productRow = listaProdutos.querySelector(`tr[data-id="${productId}"]`);
+                productRow.cells[1].textContent = updatedProduct.nome;
+                productRow.cells[2].textContent = updatedProduct.preco;
+            })
+            .catch(error => {
+                console.error(error);
+                // Handle errors (e.g., display an error message to the user)
+            });
+    }
+
+    // Function to delete a product (Delete)
+    function deleteProduct(productId) {
+        fetch(`/produtos/${productId}`, {
+            method: 'DELETE'
+        })
+            .then(() => {
+                // Remove the corresponding table row
+                const productRow = listaProdutos.querySelector(`tr[data-id="${productId}"]`);
+                listaProdutos.removeChild(productRow);
+            })
+            .catch(error => {
+                console.error(error);
+                // Handle errors (e.g., display an error message to the user)
+            });
+    }
+
+    // Call readProducts initially to display existing products
+    readProducts();
+</script>
+</body>
+</html>
